@@ -10,9 +10,17 @@ import pandas as pd
 data = pd.read_csv('adult.data', header=None, index_col=False, names=['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occuption', 'relationship',''])
 ## binning
 ## interactions and polynomials
+
+
+
 ## univariate nonlinear transformation
+# log exp sin cos etc. can help by adjusting the relative scales in the data
+rnd = np.random.RandomState(0)
+X_org = rnd.normal(size=(1000, 3))
+w = rnd.normal(size=3)
 
-
+X = rnd.poisson(10 * np.exp(X_org))
+y = np.dot(X_org, w)
 
 ## feature selection
 # reduce the number of features to simplify models that generalize better
@@ -126,4 +134,81 @@ plt.xlabel('Date')
 plt.ylabel('Rentals')
 
 y = citibike.values
-x = citibike.index.strftime
+# convert time to POSIX(the number of seconds since January 1970 00:00:00, aka(as known as) the beginning of Unix time) type
+x = citibike.index.strftime('%s').astype('int').reshape(-1, 1)
+# use the first 184 data as the training
+n_train = 184 
+
+# def a function, evaluate with specific regressor, then plot the training test y and the predicted y
+def eval_on_features(features, target, regressor):
+	# split the data to training and test not randomly
+	X_train, X_test = features[:n_train], features[n_train:]
+	y_train, y_test = target[:n_train], target[n_train:]
+	regressor.fit(X_test_rfe, y_train)
+	print('test-set R^2: {:.2f}'.format(regressor.score(X_test, y_test)))
+	y_pred = regressor.predict(X_test)
+	y_pred_train = regressor.predict(X_train)
+	
+	plt.figure(figsize=(10, 3))
+	# ?
+	plt.xticks(range(0, len(x), 8), xticks.strftime('%a %m-%d'), rotation=90, ha='left')
+	# 横轴第一区间，y_train
+	plt.plot(range(n_train), y_train, label='train')
+	# 横轴第二区间， y_test
+	plt.plot(range(n_train, len(y_test)+n_train), y_test, '-', label='test')
+	# 横轴第二区间，y_pred
+	plt.plot(range(n_train, len(y_test)+n_train), y_pred, '--', label='prediction test')
+	plt.legend(loc=(1.01, 0))
+	plt.xlabel('Date')
+	plt.ylabel('Rentals')
+
+
+from sklearn.ensemble import RandomForestRegressor
+# use RandomForestRegressor to predct, the result is not good, because the value of the POSIX time for the test set is outside of the range in the training set, trees cannot extrapolate to feature range outside the training set
+regressor = RandomForestRegressor(n_estimators=100, random_state=0)
+plt.figure()
+eval_on_features(X, y, regressor)
+
+# expert knowledge: the time of day, the day of the week
+# reshape(-1) 1 row, unknown columns
+# reshape(-1, 1) unknown rows, 1 column
+# reshape(-1, 3) unknown rows, 3 columns
+# reshape(2, -1) 2 rows, unknown columns
+
+# the time of day
+X_hour = citibike.index.hour.reshape(-1, 1)
+eval_on_features(X_hour, y, regressor)
+# the time of day and the day of the week
+X_hour_week = np.hstack([citibike.index.dayofweek.reshape(-1, 1), citibike.index.hour.reshape(-1, 1)])
+eval_on_features(X_hour_week, y, regressor)
+
+# hour and dayofweek are categorical, not suit for linear model
+from sklearn.linear_model import LinearRegression
+eval_on_features(X_hour_week, y, LinearRegression())
+
+# use one hot encode to transform categorical data to dummy variables
+enc = OneHotEncoder()
+X_hour_week_onehot = enc.fit_transform(X_hour_week).toarray()
+eval_on_features(X_hour_week_onehot, y, Ridge())
+
+# ?
+poly_transformer = PolynomialsFeatures(degree=2, interaction_only=True, include_bias=False)
+X_hour_week_onehot_poly = poly_transformer.fit_transform(X_hour_week_onehot)
+lr = Ridge()
+eval_on_features(X_hour_week_onehot_poly, y, lr)
+
+
+hour = ['%02d:00' % i for i in range(0, 24, 3)]
+day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+features = day + hour
+
+# get_feature_names name all the interaction features extracted by PolynomialsFeatures
+features_poly = poly_transformer.get_feature_names(features)
+feartures_nonzero = np.array(features_poly)[lr.coef_ != 0]
+coef_nonzero = lr.coef_[lr.coef_ != 0]
+plot nonzero coef of Ridge model, and the interaction features
+plt.figure(figsize=(15, 2))
+plt.plot(coef_nonzero, 'o')
+plt.xticks(np.arange(len(coef_nonzero)), features_nonzeros, rotation=90)
+plt.xlabel('Feature magnitude')
+plt.ylabel('Feature')
