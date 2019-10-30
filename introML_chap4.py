@@ -8,9 +8,87 @@ import mglearn
 # load data, first find it in the original data file
 import pandas as pd
 data = pd.read_csv('adult.data', header=None, index_col=False, names=['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occuption', 'relationship',''])
-## binning
-## interactions and polynomials
 
+## binning
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+X, y = mglearn.datasets.make_wave(n_spamples=100)
+X
+y
+# why 3, 3, 和X, y匹配吗
+line = np.linspace(-3, 3, 1000, endpoint=False).reshape(-1, 1)
+
+reg = DecisionTreeRegressor(min_samples_split=3).fit(X, y)
+plt.plot(line, reg.predict(line), label='decision tree')
+
+
+reg = LinearRegression().fit(X, y)
+plt.plot(line, reg.predict(line), label='linear regression')
+
+plt.plot(X[:, 0], y, 'o', c='k')
+plt.ylabel('regression output')
+plt.xlabel('input feature')
+plt.legend(loc='best')
+
+
+bins = np.linspace(-3, 3, 11)
+bins
+print('bins: {}'.format(bins))
+
+# np.digitize find which bin a certain number falls into
+which_bin = np.digitize(X, bins=bins)
+print('\nData points:\n', X[:5])
+print('\nBin membership for data points:\n', which_bin[:5])
+
+# OneHotEncoder os from the preprocessing module, it only works on integer categorical variables
+from sklearn.preprocessing import OneHotEncoder
+encoder = OneHotEncoder(sparse=False)
+# OneHotEncoder transform bin to dummy variables
+encoder.fit(which_bin)
+X_binned = encoder.transform(which_bin)
+X_binned[:5]
+X_binned.shape
+
+line_binned = encoder.transform(np.digitize(line, bins=bins))
+reg = LinearRegression().fit(X_binned, y)
+plt.plot(line, reg.predict(line_binned), label='linear regression binned')
+
+reg = DecisionTreeRegressor(min_samples_split=3).fit(X_binned, y)
+plt.plot(line, reg.predict(line_binned), label='decision tree binned')
+plt.plot(X[:, 0], y, 'o', c='k')
+# plt.vlines?
+plt.vlines(bins, -3, 3, linewidth=1, alpha=.2)
+plt.legend(loc='best')
+plt.ylabel('regression output')
+plt.xlabel('input feature')
+
+
+## interactions and polynomials
+# interaction and polynomial featrures enrich feature representation. often used in statistical modeling
+# what is the difference between statistical modeling and machine learning
+X_combined = np.hstack([X, X_binned])
+X_combined.shape
+
+reg = LinearRegression().fit(X_binned, y)
+
+# there is a single x-axis feature, so all the bins have the same slope?
+line_combined = np.hstack([line, line_binned])
+plt.plot(line, reg.predict(line_combined), label='linear regression combined')
+
+# equal to: plt.vlines(bins, -3, 3)
+for bin in bins:
+	plt.plot([bin, bin], [-3, 3], ':', c='k')
+plt.legend(loc='best')
+plt.ylabel('regression output')
+plt.xlabel('input feature')
+plt.plot(X[:, 0], y, 'o', c='k')
+
+
+# add interaction
+X_product = np.hstack([X_binned, X * X_binded])
+X_product.shape
+
+reg 
 
 
 ## univariate nonlinear transformation
@@ -21,8 +99,32 @@ w = rnd.normal(size=3)
 
 X = rnd.poisson(10 * np.exp(X_org))
 y = np.dot(X_org, w)
+print('number of integer values appearances for the first feature of X(poisson distribution):\n{}'.format(np.bincount(X[:,0])))
 
-## feature selection
+# bar plot
+bins = np.bincount(X[:, 0])
+plt.bar(range(len(bins)), bins, color='w')
+plt.ylabel('number of appearances')
+plt.xlabel('value')
+
+
+from sklearn.linear_model import Ridge
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+score = Ridge().fit(X_train, y_train).score(X_test, y_test)
+score
+
+# use log transformation
+X_train_log = np.log(X_train + 1)
+X_test_log = np.log(X_test + 1)
+plt.hist(np.log(X_train_log[:, 0] + 1), bins=25, color='gray')
+plt.ylabel('number of appearances')
+plt.xlabel('value')
+score = Ridge().fit(X_train_log, y_train).score(X_test_log, y_test)
+score
+
+
+
+## automatic feature selection
 # reduce the number of features to simplify models that generalize better
 
 
