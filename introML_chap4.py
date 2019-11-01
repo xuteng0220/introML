@@ -49,6 +49,7 @@ X_binned = encoder.transform(which_bin)
 X_binned[:5]
 X_binned.shape
 
+# np.digitize which bin each element in line falls in, encode it as dummy variables
 line_binned = encoder.transform(np.digitize(line, bins=bins))
 reg = LinearRegression().fit(X_binned, y)
 plt.plot(line, reg.predict(line_binned), label='linear regression binned')
@@ -88,7 +89,79 @@ plt.plot(X[:, 0], y, 'o', c='k')
 X_product = np.hstack([X_binned, X * X_binded])
 X_product.shape
 
-reg 
+reg = LinearRegression().fit(X_product, y)
+line_product = np.hstack([line_binned, line * line_binned])
+plt.plot(line, reg.predict(line_product), label='linear regression product')
+
+for bin in bins:
+	plt.plot([bin, bin], [-3, 3], ':', c='k')
+
+plt.plot(X[:, 0], y, 'o', c='k')
+plt.ylabel('regression output')
+plt.xlabel('input feature')
+plt.legend(loc='best')
+
+
+# add polynomials
+from sklearn,preprocessing import PolynomialFeatures
+
+# degree=10: polynomials up to x ** 10
+# include_bias=True: add a feature that's constantly 1
+poly = PolynomialFeatures(degree=10, include_bias=False)
+poly.fit(X)
+X_poly = poly.transform(X)
+
+X_poly.shape
+X[:5]
+X_poly[:5]
+poly.get_feature_names()
+
+
+reg = LinearRegression().fit(X_poly, y)
+
+line_poly = poly.transform(line)
+plt.plot(line, reg.predict(line_poly), label='polynomial linear regression')
+plt.plot(X[:, 0], y, '0', c='k')
+plt.ylabel('regression output')
+plt.xlabel('input feature')
+plt.legend(loc='best')
+
+# more complex model, say kernel SVM, will get similar predictions as polynomial regression without explicit transformation of the features 
+from sklearn.svm import SVR
+
+for gamma in [1, 10]:
+	svr=SVR(gamma=gamma).fit(X, y)
+	plt.plot(line, svr.predict(line), label='SVR gamma={}'.format(gamma))
+
+plt.plot(X[:, 0], y, 'o', c='k')
+plt.ylabel('regression output')
+plt.xlabel('input feature')
+plt.legend(loc='best')
+
+
+
+from sklearn.datasets import load_boston
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+
+boston = load_boston()
+X_train, X_test, y_train, y_test = train_test_split(boston.data, boston.target, random_state=0)
+
+# scale data
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+# ? not fit_transform
+X_test_scaled = scaler.transform(X_test)
+
+
+poly = PolynomialFeatures(degree=2).fit(X_train_scaled)
+X_train_poly = poly.transform(X_train_scaled)
+X_test_poly = poly.transform(X_test_scaled)
+X_train.shape
+X_train_poly.shape
+
+
+
 
 
 ## univariate nonlinear transformation
@@ -294,7 +367,7 @@ X_hour_week_onehot = enc.fit_transform(X_hour_week).toarray()
 eval_on_features(X_hour_week_onehot, y, Ridge())
 
 # ?
-poly_transformer = PolynomialsFeatures(degree=2, interaction_only=True, include_bias=False)
+poly_transformer = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
 X_hour_week_onehot_poly = poly_transformer.fit_transform(X_hour_week_onehot)
 lr = Ridge()
 eval_on_features(X_hour_week_onehot_poly, y, lr)
@@ -304,7 +377,7 @@ hour = ['%02d:00' % i for i in range(0, 24, 3)]
 day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 features = day + hour
 
-# get_feature_names name all the interaction features extracted by PolynomialsFeatures
+# get_feature_names name all the interaction features extracted by PolynomialFeatures
 features_poly = poly_transformer.get_feature_names(features)
 feartures_nonzero = np.array(features_poly)[lr.coef_ != 0]
 coef_nonzero = lr.coef_[lr.coef_ != 0]
