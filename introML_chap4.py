@@ -3,11 +3,56 @@ import pandas as pd
 import mglearn
 # representing data and engineering features
 
+# represent data the best way for a paticular application is called feature engineering
+
 
 ## categorical variables
+
+
+### one hor encoding（独热编码）(one-out-of_N encoding, dummy variables)
+# dummy variables is to replace a categorical variable with one or more new features only have values 0 and 1
+
 # load data, first find it in the original data file
 import pandas as pd
 data = pd.read_csv('adult.data', header=None, index_col=False, names=['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occuption', 'relationship',''])
+
+
+data.gender.value_counts()
+data.columns
+
+# pandas' function get_dummies transform columns with string or categorical values to dummies (not for integer values)
+data_dummies = pd.get_dummies(data)
+data_dummies.columns
+data_dummies.head()
+
+# pandas column indexing will include the end of the range, here is occupation_ Transport-moving, while numpy will exclude it
+features = data_dummies.iloc[:, 'age':'occupation_ Transport-moving']
+# transform pandas' DataFrame to Numpy array for some certain ML models
+X = features.values
+y = data_dummies['income_ >50'].values
+print('X.shape: {}, y.shape: {}'.format(X.shape, y.shape))
+
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=0)
+logreg = LogisticRegression()
+logreg.fit(X_train, y_train)
+logreg.score(X_test, y_test)
+
+### numbers can encode categoricals
+OneHotEncoder in sklearn can convert numeric columns to dummy variables
+
+demo_df = pd.DataFrame({'integer feature': [0, 1, 2, 1], 'categorical feature': ['socks', 'fox', 'socks', 'box']})
+demo_df
+
+# get_dummies only works on categorical strings, leaving integers unchanged
+pd.get_dummies(demo_df)
+# transform integer to strings
+demo_df['integer feature'] = demo_df['integer feature'].astype(str)
+# list columns to be encoded
+pd.get_dummies(demo_df, columns=['integer feature', 'categorical feature'])
+
 
 ## binning
 from sklearn.linear_model import LinearRegression
@@ -288,9 +333,6 @@ score
 
 # use the model(use only the features seleted) used inside the RFE to predict on test data
 select.score(X_test, y_test)
-
-
-
 
 
 
