@@ -1,1 +1,2 @@
-# introML
+- learn machine learning with the book
+- practice with kaggle competition
