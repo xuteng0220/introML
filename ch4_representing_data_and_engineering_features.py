@@ -85,7 +85,7 @@ which_bin = np.digitize(X, bins=bins)
 print('\nData points:\n', X[:5])
 print('\nBin membership for data points:\n', which_bin[:5])
 
-# OneHotEncoder os from the preprocessing module, it only works on integer categorical variables
+# OneHotEncoder from the preprocessing module, it only works on integer categorical variables
 from sklearn.preprocessing import OneHotEncoder
 encoder = OneHotEncoder(sparse=False)
 # OneHotEncoder transform bin to dummy variables
@@ -148,7 +148,7 @@ plt.legend(loc='best')
 
 
 # add polynomials
-from sklearn,preprocessing import PolynomialFeatures
+from sklearn.preprocessing import PolynomialFeatures
 
 # degree=10: polynomials up to x ** 10
 # include_bias=True: add a feature that's constantly 1
