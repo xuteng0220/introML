@@ -18,21 +18,29 @@ train['SibSp'].value_counts()
 train['Parch'].value_counts()
 # train.columns
 # select feature columns
-X_train = train.iloc[:, [0, 2, 6, 7, 9]].values
-y_train = train.iloc[:, 1]
+X_train = train.loc[:, ['PassengerId', 'Pclass', 'Sex', 'SibSp', 'Parch']]
+y_train = train.loc[:, 'Survived']
 
-X_test = test.iloc[:, [0, 1, 5, 6, 8]].dropna().values
+X_test = test.loc[:, ['PassengerId', 'Pclass', 'Sex', 'SibSp', 'Parch']]
 
-from sklearn.neighbors import KNeighborsClassifier
-clf = KNeighborsClassifier(n_neighbors=3)
-clf.fit(X_train, y_train)
-clf.score(X_train, y_train)
-clf.predict(X_test)
+# get dummy variables
+X_train_dy = pd.get_dummies(X_train).values
+X_test_dy = pd.get_dummies(X_test).values
+
+
+
+from sklearn.linear_model import LogisticRegression
+logreg = LogisticRegression(C=0.1, penalty="l1")
+logreg.fit(X_train_dy, y_train)
+logreg.score(X_train_dy, y_train)
+logreg.predict(X_test_dy)
 
 
 
 # there is nan value in both the train and test set
 # how to add categorical variables
+
+
 
 
 
@@ -56,3 +64,6 @@ lr.intercept_
 
 test_poly = poly.transform(2019)
 lr.predict(test_poly)
+
+
+# plot the gmv

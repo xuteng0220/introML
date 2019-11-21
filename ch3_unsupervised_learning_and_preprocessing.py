@@ -51,31 +51,32 @@ X, _ = make_blobs(n_samples=50, centers=5, random_state=4, cluster_std=2)
 X_train, X_test = train_test_split(X, random_state=5, test_size=.1) 
 # plot the training and test data
 fig, axes = plt.subplots(1, 3, figsize=(13, 4))
+
+# subplot 1
 # s=60, marker size?
 axes[0].scatter(X_train[:, 0], X_train[:, 1], c=mglearn.cm2(0), label='training set', s=60)
 axes[0].scatter(X_test[:, 0], X_test[:, 1], marker='^', c=mglearn.cm2(1), label='test set', s=60)
 axes[0].legend(loc='upper left')
 axes[0].set_title('original data')
 
+# subplot 2
 # scale the data(based on training) using MinMaxScaler
 scaler = MinMaxScaler()
 scaler.fit(X_train)
 X_train_scaled = scaler.transform(X_train)
 X_test_scaled = scaler.transform(X_test)
-
 axes[1].scatter(X_train_scaled[:, 0], X_train_scaled[:, 1], c=mglearn.cm2(0), label='training set', s=60)
 axes[1].scatter(X_test_scaled[:, 0], X_test_scaled[:, 1], marker='^', c=mglearn.cm2(1), label='test set', s=60)
 axes[1].set_title('scaled date')
 
+# subplot 3
 # scale the test set separately, which is bad
 test_scaler = MinMaxScaler()
 test_scaler.fit(X_test)
 X_test_scaled_badly = test_scaler.transform(X_test)
-
 axes[2].scatter(X_train_scaled[:, 0], X_train_scaled[:,1], c=mglearn.cm2(0), label='training set', s=60)
 axes[2].scatter(X_test_scaled_badly[:, 0], X_test_scaled_badly[:, 1], marker='^', c=mglearn.cm(1), label='test set', s=60)
 axes[2].set_title('scale test set badly')
-
 
 for ax in axes:
 	ax.set_xlabel('feature 0')
@@ -83,7 +84,7 @@ for ax in axes:
 
 
 
-#### shortcuts and sfficient alernatives for data preprocessing
+#### shortcuts and efficient alernatives for data preprocessing
 from sklearn.preprocessing import StandardScaler
 scaler = StandardScaler()
 X_scaled = scaler.fit(X).transform(X)
@@ -95,6 +96,7 @@ X_scaled = scaler.fit_transform(X)
 from sklearn.svm import svc
 # cancer datasets
 X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+# C trade-off parameter, small C makes the model more gerenal
 svm = SVC(C=100)
 svm.fit(X_train, y_train)
 svm.score(X_test, y_test)
@@ -183,13 +185,13 @@ plt.ylabel('second principle component')
 
 # principle components are linear combinations of the original features. the combinations are usually complex, that is not easy to interpret
 
-# the coeffiencts of the original features, combining the PC, are stored in the component_ attribute
-pca.component_.shape
-pca.component_
+# the coeffiencts of the original features, combining the PC, are stored in the components_ attribute
+pca.components_.shape
+pca.components_
 
-# matrix plot the component_
+# matrix plot of the components_
 # viridis?
-plt.matshow(pca.component_, cmap='viridis')
+plt.matshow(pca.components_, cmap='viridis')
 plt.yticks([0, 1], ['first component', 'second component'])
 plt.colorbar()
 # ha?
@@ -199,17 +201,20 @@ plt.ylabel('principle components')
 
 
 #### eigenfaces for feature extraction
-# the idea behind feature extraction is that it is possible to find a representation of your data is better suited to analysis than the raw representation 
+# the idea behind feature extraction is that it is possible to find a representation of your data that is better suited to analysis than the raw representation 
 from sklearn.datasets import fetch_lfe_people
 people = fetch_lfe_people(min_faces_per_person=20, resize=0.7)
 people
 people.images
+# ? what type
 people.target
+type(people.target)
+people.target_names
 
 image_shape = people.images[0].shape
 
-# subplots_kw?
-fix, axes = plt.subplots(2, 5, figsize=(15, 8), subplots_kw={'xticks': (), 'yticks': ()})
+# subplot_kw?
+fix, axes = plt.subplots(2, 5, figsize=(15, 8), subplot_kw={'xticks': (), 'yticks': ()})
 for target, image, ax in zip(people.target, people.images, axes.ravel()):
 	# imshow?
 	ax.imshow(image)
@@ -241,9 +246,9 @@ for target in np.unique(people.target):
 X_people = people.data[mask]
 y_people = people.target[mask]
 
-scale the grayscale of values to be 0-1 instead of 0-255
+# scale the grayscale of values to be 0-1 instead of 0-255
 X_people = X_people / 255
-
+X_people.shape
 
 from sklearn.neighbors import KNeighborsClassifier
 # stratify?
@@ -259,8 +264,41 @@ knn.score(X_test, y_test)
 # whitening option of PCA, rescales the principle components to have the same scale. rotate and rescale the data as a circle 
 mglearn.plots.plot_pca_whitening()
 
-# try data preprocessing, then instantiate PCA
-pca = PCA(n_components=100, whitrn=True, random_state=0).fit(X_train)
+# try data preprocessing, then instantiate PCA instead of using parameter whiten
+pca = PCA(n_components=100, whiten=True, random_state=0).fit(X_train)
+# principle components are representation such as  alignment of face(like position of eyes), lighting of the image, etc.
 X_train_pca = pca.transform(X_train)
 X_test_pca = pca.transform(X_test)
 X_train_pca.shape
+
+
+knn = KNeighborsClassifier(n_neighbors=1)
+knn.fit(X_train_pca, y_train)
+knn.score(X_test_pca, y_test)
+
+# how to interpret
+pca.components_.shape
+
+# return of plt.subplots?
+fix, axes = plt.subplots(3, 5, figsize=(15, 12), subplot_kw={'xticks': (), 'yticks': ()})
+for i, (component, ax) in enumerate(zip(pca.components_, axes.ravel())):
+	ax.imshow(component.reshap	(image_shape), cmap='viridis')
+	ax.set_title('{}. component'.format((i + 1)))
+
+
+# PCA, rotate the original data to new axes, keep the components with high variance and drop the low variance
+
+# an illustraion of PCA, reconstruct the original data using some components
+mglearn.plots.plot_pca_faces(X_train, X_test, image_shape)
+
+# scatter plot of the faces using the first two principle components labeled by the people the point satands for
+mglearn.discrete_scatter(X_train_pca[:, 0], X_train_pca[:, 1], y_train)
+plt.xlabel('first principle component')
+plt.ylabel('second principle component')
+
+
+### Non-Negative Matrix Factorization(NMF)
+# NFM, the components and coeffiencts are non-negative. it can only be applied to data where each feature is non-negative such as an audio track of multiple people skeaking, or music with many instruments. since the components are non-negative, they are interpretable than PCA components which may be negative
+
+# a two dimensional NFM
+mglearn.plots.plot_nmf_illustration()
