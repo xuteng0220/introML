@@ -211,6 +211,7 @@ people.target
 type(people.target)
 people.target_names
 
+# get the shape of every image. it will be used for components data reshape
 image_shape = people.images[0].shape
 
 # subplot_kw?
@@ -298,7 +299,107 @@ plt.ylabel('second principle component')
 
 
 ### Non-Negative Matrix Factorization(NMF)
-# NFM, the components and coeffiencts are non-negative. it can only be applied to data where each feature is non-negative such as an audio track of multiple people skeaking, or music with many instruments. since the components are non-negative, they are interpretable than PCA components which may be negative
+# NMF, the components and coeffiencts are non-negative. it can only be applied to data where each feature is non-negative such as an audio track of multiple people skeaking, or music with many instruments. since the components are non-negative, they are interpretable than PCA components which may be negative
 
-# a two dimensional NFM
+# a two dimensional NMF
 mglearn.plots.plot_nmf_illustration()
+
+
+# all the points in the data can be written as a positive combination of the NMF components. if we use only one component in NMF, it will be the one point tp the mean which best explain the data. all components in NMF play an equal part in contrast with PCA components
+
+#### apply NMF to face images
+mglearn.plots.plot_nmf_faces(X_train, X_test, image_shape)
+
+
+# NMF is not used for reconstruct or encode data, but for finding intersting patterns within the data
+# examples for nmf components, such as faces turn right, face highlight in the head, etc.
+from sklearn.decomposition import NMF
+nmf = NMF(n_components=15, random_state=0)
+nmf.fit(X_train)
+# X_train from fetch_lfe_people dataset
+X_train_nmf = nmf.transform(X_train)
+X_test_nmf = nmf.transform(X_test)
+
+fix, axes = plt.subplots(3, 5, figsize=(15, 12), subplot_kw={'xticks':(), 'yticks':()})
+for i, (component, ax) in enumerate(zip(nmf.components_, axes.ravel())):
+	# reshape the nmf component as the people_image
+	ax.imshow(component.reshape(image_shape))
+	ax.set_title('{}. component'.format(i))
+
+
+
+compn = 3
+# sort by 3rd component, plot first 10 images
+# np.argsort?
+# X_train_nmf[:, 3]?
+inds = np.argsort(X_train_nmf[:, compn])[::-1]
+fig, axes = plt.subplots(2, 5, figsize=(15, 8), subplot_kw={'xticks':(), 'yticks':()})
+for i, (ind, ax) in enumerate(zip(inds, axes.ravel())):
+	ax.imshow(X_train[ind].reshape(image_shape))
+
+compn = 7
+inds = np.argsort(X_train_nmf[:, compn])[::-1]
+fig, axes = plt.subplots(2, 5, figsize=(15, 8), subplot_kw={'xticks':(), 'yticks':()})
+for i, (ind, ax) in enumerate(zip(inds, axes.ravel())):
+	ax.imshow(X_train[ind].reshape(image_shape))
+
+
+S = mglearn.datasets.make_signals()
+S
+S.shape
+plt.figure(figsize=(6, 1))
+plt.plot(S, '-')
+plt.xlabel('time')
+plt.ylabel('signal')
+
+
+# 0-1 uniform dist.
+A = np.random.RandomState(0).uniform(size=(100, 3))
+# mix data into a 100-dimensinal state
+X = np.dot(S, A.T)
+X.shape
+
+# use NMF to recover the three signals
+nmf = NMF(n_components=3, random_state=42)
+# nmf transformed dataset
+S_ = nmf.fit_transform(X)
+S_.shape
+
+# use PCA
+pca = PCA(n_components=3)
+# pca transformed data
+H = pca.fit_transform(X)
+
+models = [X, S, S_, H]
+names = ['observations(first three measurements', 'actual signals', 'NMF recovered signals', 'PCA recovered signals']
+
+# gridspec_kw?
+fig, axes = plt.subplots(4, figsize=(8, 4), gridspec_kw={'hsapce': .5}, subplot_kw={'xticks':(), 'yticks':()})
+
+
+for model, name, ax in zip(models, names, axes):
+	ax.set_title(name)
+	# plot original data and transformed data
+	ax.plot(model[:, :3], '-')
+
+
+### other decomposition methods
+- ICA independent component analysis
+- FA factor analysis
+- sparse coding(dictionary learning)
+(decomposition methods webpage)[https://scikit-learn.org/stable/modules/decomposition.html]
+
+### Manifold learning with t_SNE（流行学习）
+
+# maniford learning algorithms are mainly aimed at cisualization. these method only provide a new representation of the original data(transform training data to new features), cannot transform new data(test data). 
+# it can explore the existence data, cannot used in supervised learning for prediction
+# t-SNE(t-distributed stochastic neighbor embedding), find a two dimensional representation of the original data to preserve the distances between points best. it tries to preserve the information indicating which points are neighbors to others
+
+
+from sklearn.datasets import load_digits
+digits = load_digits()
+digits
+
+fix, axes = plt.subplots(2, 5, figsize=(10, 5), subplot_kw={'xticks':(), 'yticks':()})
+for ax, img in zip(axes.ravel(), digits.images):
+	ax.imshow(img)
