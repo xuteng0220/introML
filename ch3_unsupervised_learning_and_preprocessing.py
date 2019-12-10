@@ -391,15 +391,203 @@ for model, name, ax in zip(models, names, axes):
 
 ### Manifold learning with t_SNE（流行学习）
 
-# maniford learning algorithms are mainly aimed at cisualization. these method only provide a new representation of the original data(transform training data to new features), cannot transform new data(test data). 
+# maniford learning algorithms are mainly aimed at visualization. these method only provide a new representation of the original data(transform training data to new features), cannot transform new data(test data). 
 # it can explore the existence data, cannot used in supervised learning for prediction
-# t-SNE(t-distributed stochastic neighbor embedding), find a two dimensional representation of the original data to preserve the distances between points best. it tries to preserve the information indicating which points are neighbors to others
+# t-SNE(t-distributed stochastic neighbor embedding), find a two dimensional representation of the original data to preserve the distances between points best. it tries to preserve the information indicating which points are neighbors to each others
 
 
 from sklearn.datasets import load_digits
+# handwritten digit between 0 and 9
 digits = load_digits()
 digits
+digits.data
+digits.target
+digits.data.shape
 
 fix, axes = plt.subplots(2, 5, figsize=(10, 5), subplot_kw={'xticks':(), 'yticks':()})
 for ax, img in zip(axes.ravel(), digits.images):
 	ax.imshow(img)
+
+
+
+# biuld a PCA model with 2 components
+from sklearn.decomposition import PCA 
+pca = PCA(n_components=2)
+pca.fit(digits.data)
+digits_pca = pca.transform(digits.data)
+colors = ['#476A2A', '#7851B8', '#BD3430', '#4A2D4E', '#875525', '#A83683', '#4E655E', '#853541', '#3A3120', '#535D8E']
+plt.figure(figsize=(10, 10))
+# first component's scale
+plt.xlim(digits_pca[:, 0].min(), digits_pca[:, 0].max)
+# second component's scale
+plt.ylim(digits_pca[:, 1].min(), digits_pca[:, 1].max())
+for i in range(len(digits.data)):
+	# plot the digits as text
+	# digits_pca[i, 0]?
+	# digits.target[i]?
+	# fontdict?
+	plt.text(digits_pca[i, 0], digits_pca[i, 1], str(digits.target[i]), colors = colors[digits.target[i]], fontdict={'weight': 'bold', 'size': 9})
+plt.xlabel('first principle component')
+plt.ylabel('second principle component')
+
+
+
+
+from sklearn.maniford import TSNE
+# random_state?
+tsne = TSNE(random_state=42)
+# fit and transform chain
+digits_tsne = tsne.fit_transform(digits.data)
+
+
+plt.figure(figsize=(10, 10))
+# first component's scale
+plt.xlim(digits_tsne[:, 0].min(), digits_tsne[:, 0].max)
+# second component's scale
+plt.ylim(digits_tsne[:, 1].min(), digits_tsne[:, 1].max())
+for i in range(len(digits.data)):
+	# plot the digits as text
+	# digits_pca[i, 0]?
+	# digits.target[i]?
+	# fontdict?
+	plt.text(digits_tsne[i, 0], digits_tsne[i, 1], str(digits.target[i]), colors = colors[digits.target[i]], fontdict={'weight': 'bold', 'size': 9})
+plt.xlabel('t-SNE feature 0')
+plt.ylabel('t-SNE feature 1')
+
+
+
+### Clustering
+#### k-Means Clustering
+- step 0: assigning n points randomly as the original centers
+- step 1: assigning each data points to the closest cluster center
+- step 2: setting each cluster center as the mean of the data points that are assigned to it
+- step 3: repeat step1 and step2 until the assignment no longer changes
+
+# an illustraion of k-Means cluster
+mglearn.plots.plot_kmeans_algorithm()
+
+mglearn.plots.plot_kmeans_boundaries()
+
+
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+
+X, y = make_blobs(random_state=1)
+
+# n_clusters default is 8
+kmeans = KMeans(n_clusters=3)
+kmeans.fit(X)
+# each data point in X is assigned a cluster label
+kmeans.labels_
+# assign cluster labels to new points using predict method, for the training data set, the prediction is the same as labels_
+kmeans.predict(X)
+
+
+
+mglearn.discrete_scatter(X[:, 0], X[:, 1], kmeans.labels_, markers='o')
+# cluster_centers_ stores cluster center
+mglearn.discrete_scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], [0, 1, 2], markers='^', markeredgewidth=2)
+
+
+# compare 2 clusters with 5 clusters
+fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+
+kmeans = KMeans(n_clusters=2)
+kmeans.fit(X)
+assignments = kmeans.labels_
+mglearn.discrete_scatter(X[:, 0], X[:, 1], assignments, ax=axes[0])
+
+kmeans = KMeans(n_clusters=5)
+kmeans.fit(X)
+assignments = kmeans.labels_
+mglearn.discrete_scatter(X[:, 0], X[:, 1], assignments, ax=axes[1])
+
+
+#### failure cases og k-menas cluster
+# make_blobs?
+X_varied, y_varied = make_blobs(n_samples=200, cluster_std=[1.0, 2.5, 0.5], random_state=170)
+y_pred = KMeans(n_clusters=3, random_state=0).fit_predict(X_varied)
+
+mglearn.discrete_scatter(X_varied[:, 0], X_varied[:, 1], y_pred)
+plt.legend(['cluster 0', 'cluster 1', 'cluster 2'], loc='best')
+plt.xlabel('feature 0')
+plt.ylabel('feature 1')
+
+
+
+X, y = make_blobs(random_state=170, n_samples=600)
+X
+
+
+rng = np.random.RandomState(74)
+transformation = rng.normal(size=(2, 2))
+transformation
+# linear transformation
+X = np.dot(X, transformation)
+X
+
+kmeans = KMeans(n_clusters=3)
+kmeans.fit(X)
+y_pred = kmeans.predict(X)
+
+plt.scatter(X[:, 0], X[:, 1], c=y_pred, cmap=mglearn.cm3)
+# c?
+plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], marker='^', c=[0, 1, 2], s=100, linewidth=2, cmap=mglearn.cm3)
+plt.xlabel('feature 0')
+plt.ylabel('feature 1')
+
+
+# two_moons data
+from sklearn.datasets import make_moons
+X, y = make_moons(n_samples=200, moise=0.05, random_state=0)
+
+kmeans = KMeans(n_clusters=2)
+kmeans.fit(X)
+y_pred = kmeans.predict(X)
+
+plt.scatter(X[:, 0], X[:, 1], c=y_pred, cmap=mglearn.cm2, s=60)
+plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], marker='^', c=[mglearn.cm2(0), mglearn.cm2(1)], s=100. linewidth=2)
+plt.xlabel('feature 0')
+plt.ylabel('feature 1')
+
+
+# seeing k-means as a decomposition method, where each point is represented using a single component(the cluster center), is called vector quantization
+
+
+# using pca, nmf, kmeans train people data
+X_train, X_test, y_train, y_test = train_test_split(X_people, y_people, stratify=y_people, random_state=0)
+nmf = NMF(n_components=100, random_state=0)
+nmf.fit(X_train)
+pca = PCA(n_components=100, random_state=0)
+pca.fit(X_train)
+kmeans = KMeans(n_clusters=100, random_state=0)
+kmeans.fit(X_train)
+
+X_reconstructed_nmf = np.dot(nmf.transform(X_test), nmf.components_)
+X_reconstructed_pca = pca.inverse_transform(pca.transform(X_test_scaled))
+X_reconstructed_kmeans = kmeans.cluster_centers_[kmeans.predict(X_test)]
+
+
+
+fig, axes = plt.subplots(3, 5, figsize=(8, 8), subplot_kw={'xticks': (), 'yticks': ()})
+fig.suptitle('extracted components')
+for ax, comp_kmeans,  comp_pca, comp_nmf in zip(axes.T, kmeans.cluster_centers_, pca.components_, nmf.components_):
+	ax[0].imshow(comp_kmeans.reshape(image_shape))
+	ax[1].imshow(comp_pca.reshape(image_shape), cmap='virdis')
+	ax[2].imshow(comp_nmf.reshape(image_shape))
+
+axes[0, 0].set_ylabel('kmeans')
+axes[1, 0].set_ylabel('pca')
+axes[2, 0].set_ylabel('nmf')
+
+fig, axes = plt.subplots(4, 5, subplot_kw={'xticks': (), 'yticks': ()}, figsize=(8, 8))
+fig.suptitle('reconstruction')
+for 
+
+
+
+
+
+
+
+
