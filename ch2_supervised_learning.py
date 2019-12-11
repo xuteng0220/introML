@@ -252,7 +252,7 @@ plt.ylabel('coefficient magnitude')
 
 $y^\hat = \beta_0x_0 + \beta_1x_1 + \dots + \beta_px_p + b > 0$
 
-# both LogisticRegression and LinearSVC apply an L2 regularization, the trade-off parameter which determines the strength of the regularization is C(default=1), higher C corresponding to less regularization with the coefficients(w) close to zero
+# both LogisticRegression and LinearSVC apply an L2 regularization, the trade-off parameter which determines the strength of the regularization is C(default=1), lower C corresponding to more regularization with the coefficients(w) close to zero, in other words the model is more general
 
 from sklearn.linear_model import LogisticRegression
 # in sklearn svm stands for linear support vector machines, which include svc(linear support classifier)
@@ -372,18 +372,362 @@ linear_svm.predict(x[1, 0])
 # help(Naive Bayes)?
 # Naive Bayes is fast in training
 # GaussianNB, continuous data
-# BernoulliNB, binary data
 # MultinomialNB, count data
 
+# BernoulliNB, for binary data, it counts how often every feature of of each lass is not zero, here is an exmaple
+
 X = np.array([[0, 1, 0, 1],
-			  [1, 0, 1, 1]
-			  [0, 0, 0, 1]
+			  [1, 0, 1, 1],
+			  [0, 0, 0, 1],
 			  [1, 0, 1, 0]])
 y = np.array([0, 1, 0, 1])
 
 counts = {}
-for label in unique(y):
+for label in np.unique(y):
 	# iterate over each class
 	# count (sum) entried of 1 per feature
 	counts[label] = X[y == label].sum(axis=0)
 print('feature counts:\n{}'.format(counts))
+
+# to predict, a data point is compared to the statistics for each of the classes, and the best matching class is predicted
+# MultinomialNB and BernoulliNB have a parameter alpha, large alpha means more smoothing, less complex model
+
+
+### Decision Tree
+# decision tree is like a series of yes or no questions
+# an illustration of decision tree
+mglearn.plots.plot_animal_tree()
+
+# learning a decision tree means learning the sequence of if/else questions. the questions are called test. the tests on continuous data are of the form "is feature i larger than value a". the tests will span to a tree, when a new point arrives, it will flow a test path untill leads to a leaf
+
+ # there are two ways avoid overfitting, 1.stop creating the tree early(pre_pruning), 2.built a whole tree, then remove nodes that contain little information(post-pruning)
+ # scikit-learn only implements pre-pruning
+from sklearn.tree import DecisionTreeClassifier
+cancer = load_breast_cancer()
+X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, stratify=cancer.target, random_state=42)
+# random_state, used for tie-breaking internally
+tree = DecisionTreeClassifier(random_state=0)
+tree.fit(X_train, y_train)
+tree.score(X_train, y_train)
+tree.score(X_test, y_test)
+
+
+# parameter max_depth, pre-prune the tree with a certain depth
+tree = DecisionTreeClassifier(max_depth=4, random_state=0)
+tree.fit(X_train, y_train)
+tree.score(X_train, y_train)
+tree.score(X_test, y_test)
+
+#### analyzing decision trees
+# export_graphviz function visualize the tree, generate a .dot file
+from sklearn.tree import export_graphviz
+export_graphviz(tree, out_file='cancer.tree.dot', class_names=['malignant', 'benign'], feature_names=cancer.feature_names, impurity=False, filled=True)
+
+# read .dot file to see the visulization
+import graphviz
+
+with open('cancer.tree.dot') as f:
+	dot_graph = f.read()
+graphviz.Source(dot_graph)
+
+
+
+#### featrue importance in trees
+# featrue importance rates how important each featrue is for the decision a tree makes. it is a number between 0 and 1 for each featrue(0 means not used, 1 means perfectly predict the target). the featrue importances sum to 1
+tree.featrue_importances_
+
+
+def plot_feature_importances_cancer(model):
+	# shape[1] for number of featrues, shape[0] for number of
+	# cancer.data.shape?
+	n_featrues = cancer.data.shape[1]
+	plt.barh(range(n_featrues), model.featrue_importances_, align='center')
+	# range(10)
+	# np.arange(10)?
+	plt.yticks(np.arange(n_featrues), cancer.feature_names)
+	plt.xlabel('featrue importance')
+	plt.ylabel('featrue')
+
+plot_feature_importances_cancer(tree)
+
+# a featrue with low featrue_importance may be uninformtive or not picked by this tree for another featrue encodes the same information
+# featrue importances are always positive. uslike regression coefficients may interpretable. a featrue with high importance indicates this featrue is important, but will not tell a sample should be classified to A or B
+
+
+# the x featrue has 0 featrue_importance, the y featrue has 1 featrue_importance. y has a nonmomotonous relationship with the class label
+tree = mglearn.plots.plot_tree_not_monotone()
+# display?
+display(tree)
+
+
+
+#### decision tree regression
+# all tree_based regression models(include DecisionTreeRegressor) is not able to etrapolate, or make predictions outside of the range of the training data
+
+# prepare the data set?
+ram_prices = pd.read_csv('ram_price.csv')
+ram_prices
+plt.semilogy(ram_prices.date, ram_prices.price)
+plt.xlabel('year')
+plt.ylabel('price in $/Megabyte')
+
+from sklearn.tree import DecisionTreeRegressor
+# use historical data to forecast prices after the year 2000
+data_train = ram_prices[ram_prices.date < 2000]
+data_test = ram_prices[ram_prices.date >= 2000]
+
+# np.newaxis?
+X_train = data_train.date[:, np.newaxis]
+# logarithm of y
+y_train = np.log(data_train.price)
+
+tree = DecisionTreeRegressor().fit(X_train, y_train)
+linear_reg = LinearRegression().fit(X_train, y_train)
+
+# predict on all data
+X_all = ram_prices.date[:, np.newaxis]
+pred_tree = tree.predict(X_all)
+pred_lr = linear_reg.predict(X_all)
+
+# undo logarithm
+price_tree = np.exp(pred_tree)
+price_lr = np.exp(pred_lr)
+
+# semilogy?
+plt.semilogy(data_train.date, data_train.price, label='training data')
+plt.semilogy(data_test.date, data_test.price, label='test data')
+# tree regression cannot predict outside the training data set
+plt.semilogy(ram_prices.date, price_tree, label='tree prediction')
+plt.semilogy(ram_prices.date, price_lr, label='linear prediction')
+plt.legend()
+
+# decision tree can be easily visualized. the splits of data don't depend on scaling or preprocessing of data, but it tend to be overfitting even with pre_pruning
+
+### Ensembles of Decision Trees
+#### random forests
+# a random forest is a collection of decision trees, where each tree is slightly different from the others. we can average the results of different trees to avoid overfitting
+# the trees in a random forest are ranomized, 1. selecting the data points randomly to build a tree, 2. selecting the features randomly in each split test
+
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.datasets import make_moons
+
+X, y = make_moons(n_samples=100, noise=0.25, random_state=3)
+X
+y
+X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, random_state=42)
+# parameter n_etimators, the number of trees to build
+# parameter n_samples, number of repeat times in bootstrap sampling, which will creat a dataset as big as the original one to make a decision tree
+# parameter max_features, the number of featrues selected in a decision tree, small max_features reduces overfitting. a good rule of thumb to select max_features: sqrt(n_featrues) for classification, log2(n_featrues) for regression
+# parameter random_state? different trees
+
+# in prediction, random forest average the results in regression or use soft voting in classification
+forest = RandomForestClassifier(n_estimators=5, random_state=2)
+forest.fit(X_train, y_train)
+
+fig, axes = plt.subplots(2, 3, figsize=(20, 10))
+# forest.estimators_ ?
+for i, (ax, tree) in enumerate(zip(axes.ravel(), forest.estimators_)):
+	ax.set_title('tree {}'.format(i))
+	# the partition plot of every tree in forest
+	mglearn.plots.plot_tree_partition(X_train, y_train, tree, ax=ax)
+# ?
+mglearn.plots.plot_2d_separator(forest, X_train, fill=True, ax= axes[-1, -1], alpha=.4)
+axes[-1, -1].set_title('random forest')
+# ?
+mglearn.discrete_scatter(X_train[:, 0], X_train[:, 1], y_train)
+
+
+X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+forest = RandomForestClassifier(n_estimators=100, random_state=0)
+forest.fit(X_train, y_train)
+forest.score(X_train, y_train)
+forest.score(X_test, y_test)
+
+plot_feature_importances_cancer(forest)
+
+
+# random forests do not perform well on high dimensional, sparse data such as text data(linear model might be appropriate)
+# random forest require more memory and are slower to train and predict than linear models
+
+
+
+#### Gradient boosting machines(gradient boosted regression trees)
+# it builds trees in a serial manner, where each tree tries to correct the mistakes of the previous one. it often uses strong pre_pruning to build shallow trees, of depth 1 to 5, that uses less memory and predicts faster
+from sklearn.ensemble import GradientBoostingClassifier
+X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+gbrt = GradientBoostingClassifier(random_state=0)
+gbrt.fit(X_train, y_train)
+gbrt.score(X_train, y_train)
+gbrt.score(X_test, y_test)
+
+# lower learning_rate can reduce overfitting
+grbt = GradientBoostingClassifier(random_state=0, learning_rate=0.01)
+grbt.fit(X_train, y_train)
+grbt.score(X_train, y_train)
+grbt.score(X_test, y_test)
+
+# fewer tree depth can reduce overfitting
+grbt = GradientBoostingClassifier(random_state=0, max_depth=1)
+grbt.fit(X_train, y_train)
+grbt.score(X_train, y_train)
+grbt.score(X_test, y_test)
+
+
+plot_feature_importances_cancer(gbrt)
+
+# for large-scale dataset, package xgboost maybe more powerful in building a gradient boosting model
+
+
+### Kernelized Support Vector Machines
+
+X, y = make_blobs(centers=4, random_state=8)
+y
+# make y as categorical variable 
+y = y % 2
+
+mglearn.discrete_scatter(X[:, 0], X[:, 1], y)
+plt.xlabel('featrue 0')
+plt.ylabel('featrue 1')
+
+# build a linear svm model
+from sklearn.svm import LinearSVC
+linear_svm = LinearSVC().fit(X, y)
+
+# 2d separator, a line
+mglearn.plots.plot_2d_separator(linear_svm, X)
+mglearn.discrete_scatter(X[:, 0], X[:, 1], y)
+plt.xlabel('featrue 0')
+plt.ylabel('featrue 1')
+
+X.shape
+# add the squared feature 1
+X_new = np.hstack(X, X[:, 1:] ** 2)
+
+from mpl_toolkits.mplot3d import Axes3D, axes3d
+figure = plt.figure()
+# visualize in 3D
+ax = Axes3D(figure, elev=-152, azim=-26)
+# plot all the points with y == 0,
+# plot all the points with y == 1
+mask = y == 0
+
+# X_new[mask, 2] the added new featrue
+ax.scatter(X_new[mask, 0], X_new[mask, 1], X_new[mask, 2], c='b', cmap=mglearn.cm2, s=60)
+ax.scatter(X_new[~mask, 0], X_new[~mask, 1], X_new[~mask, 2], c='r', marker='^', cmap=mglearn.cm2, s=60)
+ax.set_xlabel('featrue 0')
+ax.set_ylabel('featrue 1')
+ax.set_zlabel('featrue1 ** 2')
+
+
+linear_svm_3d = LinearSVC().fit(X_new, y)
+coef, intercept = linear_svm_3d.coef_.ravel(), linear_svm_3d.intercept_
+coef
+intercept
+
+# linear decision boundry
+figure = plt.figure()
+ax = Axes3D(figure, elev=-152, azim=-26)
+xx = np.linspace(X_new[:, 0].min() - 2, X_new[:, 0].max() + 2, 50)
+yy = np.linspace(X_new[:, 2].min() - 2, X_new[:, 1].max() + 2, 50)
+
+XX, YY = np.meshgrid(xx, yy)
+# decision boundry(a plane)
+ZZ = (coef[0] * XX + coef[1] * YY + intercept) / -coef[2]
+
+ax.plot_surface(XX, YY, ZZ, rstride=8, cstride=8, alpha=0.3)
+ax.scatter(X_new[mask, 0], X_new[mask, 1], X_new[mask, 2], c='b', cmap=mglearn.cm2, s=60)
+ax.scatter(X_new[~mask, 0], X_new[~mask, 1], X_new[~mask, 2], c='r', marker='^', cmap=mglearn.cm2, s=60)
+
+ax.set_xlabel('featrue 0')
+ax.set_ylabel('featrue 1')
+ax.set_zlabel('featrue 1 ** 2')
+
+
+ZZ = YY ** 2
+# decision_function?
+# np.c_?
+dec = linear_svm_3d.decision_function(np.c_[XX.ravel(), YY.ravel(), ZZ.ravel()])
+plt.contourf(XX, YY, dec.reshape(XX.shape), levels=[dec.min(), 0, dec.max()], cmap=mglearn.cm2, alpha=0.5)
+mglearn.discrete_scatter(X[:, 0], X[:, 1], y)
+plt.xlabel('featrue 0')
+plt.ylabel('featrue 1')
+
+
+#### kernel SVMs
+# kernel trick works by directly computing the distace of the data points for the expanded feature representation
+
+# polynomial kernel, computes all possible polynomials up to a certain degree of the original feature
+# RBF(radial basis function), also known as the Gaussian kernel, it considers all possible polynomials of all degrees, but the importance of the featrues decreases for higher degrees
+
+# name of SVM for classification, only a subset of the training points matter for defining the decision boundry: the ones lie on the border between the classes. these are called support vectors
+
+
+# to make a prediction for a new point, the distance to each of the support vectors is measured, the importance of the support vectors is stored in the dual_coef_ attribute of SVC, a classification decision is made based on the distances to the support vector
+
+
+
+from sklearn.svm import SVC
+# SVC is nonlinear
+# from sklearn.svm import LinearSVC
+#  this is a linear svm
+
+X, y = mglearn.tools.make_handcrafted_dataset()
+# train a kernel SVM. parameter gamma controls the width of the Gaussian kernel. it determines the scale for points how close together. parameter C is a regularization parameter. it limits the importance of each support vector(value of support vector in dual_coef_)
+svm = SVC(kernel='rbf', C=10, gamma=0.1).fit(X, y)
+# plot the decision boundry
+mglearn.plots.plot_2d_separator(svm, X, eps=.5)
+# scatter plot
+mglearn.discrete_scatter(X[:, 0], X[:, 1], y)
+# support vectors
+sv = svm.support_vectors_
+
+sv_labels = svm.dual_coef_.ravel() > 0
+# plot support vectors with their importance
+mglearn.discrete_scatter(sv[:, 0], sv[:, 1], sv_labels, s=15, markeredgewidth=3)
+plt.xlabel('featrue 0')
+plt.ylabel('featrue 1')
+
+
+
+
+##### tuning SVM parameters
+# small gamma indicates a large radius for Gaussian kernel, means points are considered close by, make the model more general
+# large C makes the model less regularization
+fig, axes = plt.subplots(3, 3, figsize=(15, 10))
+
+for ax, C in zip(axes, [-1, 0, 3]):
+	for a, gamma in zip(ax, range(-1, 2)):
+		mglearn.plots.plot_svm(log_C=C, log_gamma=gamma, ax=a)
+# why the legend's position there?
+axes[0, 0].legend(['class 0', 'class 1', 'sv class 0', 'sv class 1'], ncol=4, loc=(.9, 1.2))
+
+
+# apply svc to breast cancer datasets
+X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
+
+# by default, SVC uses rbf kernel with C=1, gamma=1/n_featrues
+svc = SVC()
+svc.fit(X_train, y_train)
+
+svc.score(X_train, y_train)
+svc.score(X_test, y_test)
+
+
+# see the scale of each featrue
+X.shape
+X_train.min(axis=0)
+plt.plot(X_train.min(axis=0), 'o', label='min')
+plt.plot(X_train.max(axis=0), '^', label='max')
+plt.legend(loc=4)
+plt.xlabel('featrue index')
+plt.ylabel('featrue magnitude')
+# y axis in log scale
+plt.yscale('log')
+
+
+
+#### preprocessing data for SVMs
+
+min_on_training = X_train.min(axis=0)
+
