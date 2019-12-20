@@ -563,15 +563,11 @@ pca.fit(X_train)
 kmeans = KMeans(n_clusters=100, random_state=0)
 kmeans.fit(X_train)
 
-X_reconstructed_nmf = np.dot(nmf.transform(X_test), nmf.components_)
-X_reconstructed_pca = pca.inverse_transform(pca.transform(X_test_scaled))
-X_reconstructed_kmeans = kmeans.cluster_centers_[kmeans.predict(X_test)]
-
-
-
 fig, axes = plt.subplots(3, 5, figsize=(8, 8), subplot_kw={'xticks': (), 'yticks': ()})
 fig.suptitle('extracted components')
 for ax, comp_kmeans,  comp_pca, comp_nmf in zip(axes.T, kmeans.cluster_centers_, pca.components_, nmf.components_):
+	# reshape the components_ (cluster_centers_) as a image shape, then display the image
+	# ? n=100, why components_ imshow only 5
 	ax[0].imshow(comp_kmeans.reshape(image_shape))
 	ax[1].imshow(comp_pca.reshape(image_shape), cmap='virdis')
 	ax[2].imshow(comp_nmf.reshape(image_shape))
@@ -580,9 +576,257 @@ axes[0, 0].set_ylabel('kmeans')
 axes[1, 0].set_ylabel('pca')
 axes[2, 0].set_ylabel('nmf')
 
+
+
+# reconstruct the test data using different models
+# ?
+X_reconstructed_nmf = np.dot(nmf.transform(X_test), nmf.components_)
+# ?
+X_reconstructed_pca = pca.inverse_transform(pca.transform(X_test_scaled))
+# ?
+X_reconstructed_kmeans = kmeans.cluster_centers_[kmeans.predict(X_test)]
+
 fig, axes = plt.subplots(4, 5, subplot_kw={'xticks': (), 'yticks': ()}, figsize=(8, 8))
 fig.suptitle('reconstruction')
-for 
+for ax, orig, rec_kmeans, rec_pca, rec_nmf in zip(axes.T, X_test, X_reconstructed_kmeans, X_reconstructed_pca, X_reconstructed_nmf):
+	ax[0].imshow(orig.reshape(image_shape))
+	ax[1].imshow(rec_kmeans.reshape(image_shape))
+	ax[2].imshow(rec_pca.reshape(image_shape))
+	ax[3].imshow(rec_nmf.reshape(image_shape))
+
+axes[0, 0].set_ylabel('original')
+axes[1, 0].set_ylabel('kmeans')
+axes[2, 0].set_ylabel('pca')
+axes[3, 0].set_yticks('nmf')
+
+
+
+
+# for 2-dimensional data, using pca or nmf to reduce dimension is not a good idea, but kmeans with large cluster number may give a expressive representation
+X, y = make_moons(n_samples=200, noise=0.05, random_state=0)
+kmeans = KMeans(n_clusters=10, random_state=0)
+kmeans.fit(X)
+y_pred = kmeans.labels_
+y_pred = kmeans.predict(X)
+
+# plot scatter of X
+plt.scatter(X[:, 0], X[:, 1], c=y_pred, s=60, cmap='Paired')
+# plot scatter of cluster center
+plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], s=60, marker='^', c=range(kmeans.n_clusters), linewidth=2, cmap='Paired')
+plt.xlabel('feature 0')
+plt.ylabel('feature 1')
+
+
+# n_clusters=10 makes the 2-dimensional original data with 10 features, which is the 10 distance_features to 10 different cluster center
+distance_features = kmeans.transform(X)
+distance_features.shape
+distance_features
+
+
+# with 10 feature, apply linear classification model?
+# from sklearn.linear_model import LogisticRegression
+# logreg = LogisticRegression()
+
+# apply kmeans cluster to large dataset using MiniBatchKMeans class
+
+
+### Agglomerative Clustering (凝聚聚类)
+step1: each point is a single cluster
+step2: merge similar clusters with some specific linkage criteria
+step3: repeat step2 until some stopping criterion is reached
+
+- linkage
+	- ward, the default choice, it picks two clusters to merge such that the variance within all clusters increases the least
+	- average, it merges the two clusters that have the smallest average distance betweent all th
+	- complete, it merges the two clusters that hace the smallest maximum distance between their points
+
+- stopping criterion
+	- number of clusters
+
+# an illustraion of agglomerative clustering
+mglearn.plots.plot_agglomerative_algorithm()
+
+
+
+# agglomerative clustering has no predict method for new data points because of the way it works, but has the chain method fit_predict working on training dataset
+# agglomerative clustering requires user to specify the number of clusters
+from sklearn.cluster import AgglomerativeClustering
+X, y = make_blobs(random_state=1)
+agg = AgglomerativeClustering(n_clusters=3)
+assignment = agg.fit_predict(X)
+
+mglearn.discrete_scatter(X[:, 0], X[:, 1], assignment)
+plt.xlabel('feature 0')
+plt.ylabel('feature 1')
+
+# an illustraion of agglomerative clustering with iterative procedure
+mglearn.plots.plot_agglomerative()
+
+
+
+# dendrogram, a visualization of hierarchical clustering
+# SciPy provides dendrogram
+
+
+from scipy.cluster.hierarchy import dendrogram, ward
+
+X, y = make_blobs(random_state=0, n_samples=12)
+# apply the ward clustering to array X
+# SciPy ward function returns an array that specifies the distances bridged when performing agglomerative clustering
+linkage_array = ward(X)
+# plot dendrogram for the linkage_array containing the distances between clusters
+dendrogram(linkage_array)
+
+ax = plt.gca()
+# ?
+bounds = ax.get_xbound()
+# plot the bound line
+ax.plot(bounds, [7.25, 7.25], '--', c='k')
+ax.plot(bounds, [4, 4], '--', c='k')
+# bounds[1]?
+ax.text(bounds[1], 7.25, 'two clusters', va='center', fontdict={'size': 15})
+ax.text(bounds[1], 4, 'three clusters', va='center', fontdict={'size': 15})
+plt.xlabel('sample index')
+plt.ylabel('cluster distance')
+
+
+
+### DBSCAN
+# DBSCAN stands for density-based spatial clustering of applications with noise.
+# it does not require to set the number of clusters priorily
+# it can capture clusters of complex shapes such as half moon shape
+# it can identify points that are not part of any cluster
+
+# DBSCAN's clusters form dense regions of data, separated by regions that are relatively empty
+# points within a dense region are called core samples(core points). if there are at least min_samples(parameter of DBSCAN) points within a distance of eps(parameter of DBSCAN) to a given data point, that point is classified as a core sample
+
+
+step1: DBSCAN picks an arbitrary point to start, say point A
+step2: find all points within distance eps of A, if the number of points is less than min_samples, A is labeled as noise, else A will be assigned a cluster label
+step3: all neighbors within eps of A are visited, if it has not been labeled, it willed labeled the same as A, if it is a core points, its neighbors are visited in turn
+step4: clusters grows until no more points left
+
+
+# build a DBSCAN for a sythetic dataset
+# DBSCAN does not allow predictions on new test data
+from sklearn.cluster import DBSCAN
+X, y = make_blobs(random_state=0, n_samples=12)
+X
+y
+
+# use default parameter in DBSCAN
+dbscan = DBSCAN()
+clusters = dbscan.fit_predict(X)
+# labele -1 indicates all points assigned as noise
+clusters
+
+
+# scatter plot
+mglearn.discrete_scatter(X[:, 0], X[:, 1], clusters)
+
+# clusters assignments for different parameter values of min_samples and eps
+mglearn.plots.plot_dbsacn()
+
+
+
+# after data scaling using StandardScaler or MinMaxScaler may help to find a good setting for eps
+X, y = make_moons(n_samples=200, noise=0.05, random_state=0)
+
+# rescale the training data to zero mean and unit variance
+scaler = StandardScaler()
+scaler.fit(X)
+X_scaled = scaler.transform(X)
+
+dbscan = DBSCAN()
+clusters = dbscan.fit_transform(X_scaled)
+plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap=mglearn.cm2, s=60)
+plt.xlabel('feature 0')
+plt.ylabel('feature 1')
+
+
+
+### caompare and evaluate clustering algorithms
+# ARI(adjusted rand index) and NMI(normalized mutual information) are measurements to assess the outcome of a clustering algorithms relative to a ground truth clustering
+
+from sklearn.metrics.cluster import adjusted_rand_score
+X, y = make_moons(n_samples=200, noise=0.05, random_state=0)
+
+# rescale the training data to zero mean and unit variance
+scaler = StandardScaler()
+scaler.fit(X)
+X_scaled = scaler.transform(X)
+
+fig, axes = plt.subplots(1, 4, figsize=(15, 3), subplot_kw={'xticks': (), 'yticks': ()})
+
+# a list of clusters algorithms
+algorithms = [KMeans(n_clusters=2), AgglomerativeClustering(n_clusters=2), DBSCAN()]
+
+# create a random cluster assignment for reference plot in axes[0]
+random_state = np.random.RandomState(seed=0)
+random_clusters = random_state.randint(low=0, high=2, size=len(X))
+random_clusters
+
+axes[0].scatter(X_scaled[:, 0], X_scaled[:, 1], c=random_clusters, cmap=mglearn.cm3, s=60)
+axes[0].set_title('random assignment - ARI: {:.2f}'.format(adjusted_rand_score(y, random_clusters)))
+
+for ax, algorithm in zip(axes[1:], algorithms):
+	# fit the cluster algorithm
+	clusters = algorithm.fit_predict(X_scaled)
+	# scatter X_scaled with clusters predict from different algorithm
+	ax.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap=mglearn.cm3, s=60)
+	# set title with ARI
+	ax.set_title('{} - ARI: {:.2f}'.format(algorithm.__class__.__name__, adjusted_rand_score(y, clusters)))
+
+
+# compare accurary_score with ARI
+from sklearn.metrics import accurary_score
+
+clusters1 = [0, 0, 1, 1, 0]
+clusters2 = [1, 1, 0, 0, 1]
+
+# accurary_score requires the assigned clusters labels to exactly match the ground truth
+# ARI only cares whether the points are in the same cluster
+accurary_score(clusters1, clusters2)
+adjusted_rand_score(clusters1, clusters2)
+
+
+#### other metrics evaluating the clustering
+# the silhouette score computes the compactness of a cluster, high score is better, range from 0 to 1
+
+from sklearn.metrics.cluster import silhouette_score
+
+X, y = make_moons(n_samples=200, noise=0.05, random_state=0)
+
+# rescale X to zero mean and unit variance
+scaler = StandardScaler()
+scaler.fit(X)
+X_scaled = scaler.transform(X)
+
+# subplot_kw: Dict with keywords passed to the add_subplot call used to create each subplot
+fig, axes = plt.subplots(1, 4, figsize=(15, 3), subplot_kw={'xticks':(), 'yticks':()})
+
+# generate random cluster
+random_state = np.random.RandomState(seed=0)
+random_clusters = random_state.randint(low=0, high=2, size=len(X))
+# plot random cluster in axes[0]
+axes[0].scatter(X_scaled[:, 0], X_scaled[:, 1], c=random_clusters, cmap=mglearn.cm3, s=60)
+
+algorithms = [KMeans(n_clusters=2), AgglomerativeClustering(n_clusters=2), DBSCAN()]
+
+for ax, algorithm in zip(axes[1:], algorithms):
+	clusters = algorithm.fit_predict(X_scaled)
+	# plot clusters predicted from different algorithm
+	ax.scatter(X_scaled[:, 0], X_scaled[:, 1], c=clusters, cmap=mglearn.cm3, s=60)
+	# set title with silhouette score
+	ax.set_title('{}: {:.2f}'.format(algorithm.__class__.__name__, silhouette_score(X_scaled, clusters))
+
+
+
+#### DBSCAN on faces datasets
+
+
+
+
 
 
 

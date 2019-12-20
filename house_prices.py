@@ -121,8 +121,30 @@ train_test = pd.concat([train_features, test_features], axis=0)
 # get dummy variables
 train_test_dummy = pd.get_dummies(train_test)
 
-train_dummy = train_test_dummy.iloc[range(train_len+1), :]
-test_dummy = train_test_dummy.iloc[range(train_len+1, len(train_test_dummy)), :]
+train_dummy = train_test_dummy.iloc[range(train_len+1), :].values
+test_dummy = train_test_dummy.iloc[range(train_len+1, len(train_test_dummy)), :].values
+y_train = train['SalePrice'].values
+
+# import linear models
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
+
+
+lr = LinearRegression().fit(train_dummy, y_train)
+lr.score(train_dummy, y_train)
+lr.predict(test_dummy)
+
+ridge = Ridge().fit(train_dummy, y_train)
+ridge.score(train_dummy, y_train)
+ridge.predict(test_dummy)
+
+lasso = Lasso().fit(train_dummy, y_train)
+lasso.score(train_dummy, y_train)
+lasso.predict(test_dummy)
+
+# import data reduceing models
+from sklearn.decomposition import PCA
 
 
 
