@@ -146,6 +146,8 @@ lasso.predict(test_dummy)
 # import data reduceing models
 from sklearn.decomposition import PCA
 
+# import data scaling models
+import sklearn. import StandardScale
 
 
 

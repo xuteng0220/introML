@@ -1,9 +1,12 @@
 # unsupervised learning and preprocessing
 
+# import necessary modules
 import numpy as np
-import panda as pd
+import pandas as pd
 import matplotlib.pyplot as plt
 import mglearn
+
+%matplotlib inline
 
 # unsupervised learning, the learning algorithm is just shown the input data and asked to extract knowledge from this data
 
@@ -12,17 +15,29 @@ import mglearn
 - clustering, partition data into distinct groups of similar items
 
 ## preprocessing and rescaling
+# an illustraion of rescaling of data
 mglearn.plots.plot_scaling()
+
 ### applying data transformations
 from sklearn.datasets import load_breast_cancer
 from sklearn.model_selection import train_test_split
 cancer = load_breast_cancer()
 
+type(cancer)
+cancer
+
 X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=1)
 X_train.shape
 X_test.shape
 
-# basic usage of model in sklearn modules, first import the class, second instantiate it, third fit the data, (forth, transform data for data preprocessing)
+
+**basic usage of model in sklearn modules**
+- step1 import the class
+- step2 instantiate it
+- step3 fit the data
+- step4 transform data for data preprocessing(for data preprocessing models)
+- step5 predict(for ml models)
+
 # import model
 from sklearn.preprocessing import MinMaxScaler
 # instantiate
@@ -37,7 +52,7 @@ X_train.min(axis=0)
 X_train.max(axis=0)
 X_train_scaled.min(axis=0)
 X_train_scaled.max(axis=0)
-
+# test data most be scaled the same as training data
 X_test_scaled = scaler.transform(X_test)
 # the test set, after scaling, the min and max are not 0 and 1, because the scaler is based on training set
 X_test_scaled.min(axis=0)
@@ -47,13 +62,20 @@ X_test_scaled.max(axis=0)
 ### scaling training and test data the same way
 from sklearn.datasets import make_blobs
 X, _ = make_blobs(n_samples=50, centers=5, random_state=4, cluster_std=2)
-# test_size?
+make_blobs?
+
+X
+_
+X.shape
+
+# test_size, float between 0 and 1, the proportion of the dataset generating test set; int, the number of dataset generating test set
 X_train, X_test = train_test_split(X, random_state=5, test_size=.1) 
+X_test.shape
+
 # plot the training and test data
 fig, axes = plt.subplots(1, 3, figsize=(13, 4))
 
 # subplot 1
-# s=60, marker size?
 axes[0].scatter(X_train[:, 0], X_train[:, 1], c=mglearn.cm2(0), label='training set', s=60)
 axes[0].scatter(X_test[:, 0], X_test[:, 1], marker='^', c=mglearn.cm2(1), label='test set', s=60)
 axes[0].legend(loc='upper left')
@@ -75,7 +97,7 @@ test_scaler = MinMaxScaler()
 test_scaler.fit(X_test)
 X_test_scaled_badly = test_scaler.transform(X_test)
 axes[2].scatter(X_train_scaled[:, 0], X_train_scaled[:,1], c=mglearn.cm2(0), label='training set', s=60)
-axes[2].scatter(X_test_scaled_badly[:, 0], X_test_scaled_badly[:, 1], marker='^', c=mglearn.cm(1), label='test set', s=60)
+axes[2].scatter(X_test_scaled_badly[:, 0], X_test_scaled_badly[:, 1], marker='^', c=mglearn.cm2(1), label='test set', s=60)
 axes[2].set_title('scale test set badly')
 
 for ax in axes:
@@ -88,12 +110,14 @@ for ax in axes:
 from sklearn.preprocessing import StandardScaler
 scaler = StandardScaler()
 X_scaled = scaler.fit(X).transform(X)
+X_scaled[:10]
 # same result
 X_scaled = scaler.fit_transform(X)
+X_scaled[:10]
 
 
 ### the effect of preprocessing on supervised learning
-from sklearn.svm import svc
+from sklearn.svm import SVC
 # cancer datasets
 X_train, X_test, y_train, y_test = train_test_split(cancer.data, cancer.target, random_state=0)
 # C trade-off parameter, small C makes the model more gerenal
@@ -120,7 +144,11 @@ X_test_scaled = scaler.transform(X_test)
 
 svm.fit(X_train_scaled, y_train)
 svm.score(X_test_scaled, y_test)
-# svm.coef_?
+
+svm.
+# svm.<Tab>
+# show svm methods
+
 
 ## Dimensionality reduction, feature extraction, maniford learning
 
@@ -132,25 +160,28 @@ mglearn.plots.plot_pca_illustration()
 # load data
 from sklearn.datasets import load_breast_cancer
 cancer = load_breast_cancer()
+cancer.keys()
 
 cancer.data.shape
+cancer.target.shape
+cancer.data[cancer.target == 0].shape
 
-# relationship between every two features using histogram
+# relationship between benign and malignant on every feature using histogram
 fig, axes = plt.subplots(15, 2, figsize=(10, 20))
 malignant = cancer.data[cancer.target == 0]
 benign = cancer.data[cancer.target == 1]
 
-# ?
-ax = ases.ravel()
+# Return a flattened array
+ax = axes.ravel()
 
 # 30 features
 for i in range(30):
 	# cut the data for histogram
 	_, bins = np.histogram(cancer.data[:, i], bins=50)
 	ax[i].hist(malignant[:, i], bins=bins, color=mglearn.cm3(0), alpha=.5)
-	ax[i].hist(benign[:, i],bins=bins, color=mglearn.cm3(2), alpha=.5)
-	ax[i].set_title(cnacer.feature_name[i])
-	# ?
+	ax[i].hist(benign[:, i], bins=bins, color=mglearn.cm3(2), alpha=.5)
+	ax[i].set_title(cancer.feature_names[i])
+    # y轴标签为空
 	ax[i].set_yticks(())
 ax[0].set_xlabel('feature magnitude')
 ax[0].set_ylabel('frequency')
@@ -175,13 +206,16 @@ X_pca = pca.transform(X_scaled)
 print('original shape: {}'.format(str(X_scaled.shape)))
 print('reduced shape: {}'.format(str(X_pca.shape)))
 
+
 plt.figure(figsize=(8, 8))
 mglearn.discrete_scatter(X_pca[:, 0], X_pca[:, 1], cancer.target)
 plt.legend(cancer.target_names, loc='best')
-# ?
+# plt.gca, get the current axes
+# axes.set_aspect, set the aspect of the axis scaling, i.e. the ratio of y-unit to x-unit
 plt.gca().set_aspect('equal')
 plt.xlabel('first principle component')
 plt.ylabel('second principle component')
+
 
 # principle components are linear combinations of the original features. the combinations are usually complex, that is not easy to interpret
 
@@ -189,21 +223,27 @@ plt.ylabel('second principle component')
 pca.components_.shape
 pca.components_
 
+# X_pca and X_pca1 are equal
+X_pca
+X_pca1 = np.dot(X_scaled, pca.components_.T)
+X_pca1
+
+
 # matrix plot of the components_
-# viridis?
+# viridis, a form of colormap, perceptually uniform shades of blue-green-yellow
 plt.matshow(pca.components_, cmap='viridis')
 plt.yticks([0, 1], ['first component', 'second component'])
 plt.colorbar()
-# ha?
-plt.xticks(range(len(cancer.feature_names)), cancer.feature_names, rotation=60, ha='left')
+# ha, horizontalalignment, {'center', 'right', 'left'}
+plt.xticks(range(len(cancer.feature_names)), cancer.feature_names, rotation=60, ha='center')
 plt.xlabel('feature')
 plt.ylabel('principle components')
 
 
 #### eigenfaces for feature extraction
 # the idea behind feature extraction is that it is possible to find a representation of your data that is better suited to analysis than the raw representation 
-from sklearn.datasets import fetch_lfe_people
-people = fetch_lfe_people(min_faces_per_person=20, resize=0.7)
+from sklearn.datasets import fetch_lfw_people
+people = fetch_lfw_people(min_faces_per_person=20, resize=0.7)
 people
 people.images
 # ? what type
@@ -316,7 +356,7 @@ mglearn.plots.plot_nmf_faces(X_train, X_test, image_shape)
 from sklearn.decomposition import NMF
 nmf = NMF(n_components=15, random_state=0)
 nmf.fit(X_train)
-# X_train from fetch_lfe_people dataset
+# X_train from fetch_lfw_people dataset
 X_train_nmf = nmf.transform(X_train)
 X_test_nmf = nmf.transform(X_test)
 

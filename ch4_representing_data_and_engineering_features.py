@@ -1,7 +1,12 @@
+# representing data and engineering features
+
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import mglearn
-# representing data and engineering features
+
+%matplotlib inline
+
 
 # represent data the best way for a paticular application is called feature engineering
 
@@ -12,9 +17,13 @@ import mglearn
 ### one hor encoding（独热编码）(one-out-of_N encoding, dummy variables)
 # dummy variables is to replace a categorical variable with one or more new features only have values 0 and 1
 
-# load data, first find it in the original data file
+# load data, https://github.com/amueller/introduction_to_ml_with_python
+# chrome open the txt file, and save as
 import pandas as pd
-data = pd.read_csv('adult.data', header=None, index_col=False, names=['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occuption', 'relationship',''])
+data = pd.read_csv('adult.csv', header=None, index_col=False, names=['age', 'workclass', 'fnlwgt', 'education', 'education-num', 'marital-status', 'occupation', 'relationship','race', 'gender', 'capital-gain', 'capital-loss', 'hours-per-week', 'native-country', 'income'])
+
+data = data[['age', 'workclass', 'education', 'gender', 'hours-per-week', 'occupation', 'income']]
+data.head()
 
 
 data.gender.value_counts()
