@@ -244,22 +244,25 @@ plt.ylabel('principle components')
 # the idea behind feature extraction is that it is possible to find a representation of your data that is better suited to analysis than the raw representation 
 from sklearn.datasets import fetch_lfw_people
 people = fetch_lfw_people(min_faces_per_person=20, resize=0.7)
-people
+
+people.keys()
+
 people.images
-# ? what type
 people.target
 type(people.target)
 people.target_names
 
 # get the shape of every image. it will be used for components data reshape
 image_shape = people.images[0].shape
+image_shape
 
-# subplot_kw?
+# subplot_kw, key-word parameter, xticks, yticks none
 fix, axes = plt.subplots(2, 5, figsize=(15, 8), subplot_kw={'xticks': (), 'yticks': ()})
+# zip will cut the elements with one with the lowest length
 for target, image, ax in zip(people.target, people.images, axes.ravel()):
-	# imshow?
 	ax.imshow(image)
 	ax.set_title(people.target_names[target])
+
 
 # 3023 images 87*65 pixels
 people.images.shape
@@ -270,8 +273,8 @@ len(people.target_names)
 counts = np.bincount(people.target)
 for i, (count, name) in enumerate(zip(counts, people.target_names)):
 	print('{0:25} {1:3}'.format(name, count), end='    ')
-	# newline every 3 people? every 2 people?
 	if (i + 1) % 3 == 0:
+		# newline
 		print()
 
 
