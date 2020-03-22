@@ -279,7 +279,7 @@ for i, (count, name) in enumerate(zip(counts, people.target_names)):
 
 
 people.target.shape
-mask = np.zeros(people.target.shape. dtype=np.bool)
+mask = np.zeros(people.target.shape, dtype=np.bool)
 # select 50 images of each person
 # ?
 # people.target
